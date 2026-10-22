@@ -1,4 +1,5 @@
 import type { Clip } from "../types";
+import { computeKeptSegments } from "../engine/silenceRemover";
 
 function fmt(s: number): string {
   const m = Math.floor(s / 60);
@@ -25,10 +26,10 @@ export default function Timeline({
   onRemove,
   onAddClick,
 }: Props) {
-  const totalDuration = clips.reduce(
-    (sum, c) => sum + Math.max(0, c.trimEnd - c.trimStart),
-    0
-  );
+  const totalDuration = clips.reduce((sum, c) => {
+    const kept = computeKeptSegments(c.trimStart, c.trimEnd, c.silenceCuts);
+    return sum + kept.reduce((s, seg) => s + (seg.end - seg.start), 0);
+  }, 0);
 
   return (
     <div className="timeline">
@@ -42,6 +43,8 @@ export default function Timeline({
           const trimmedLen = Math.max(0.1, clip.trimEnd - clip.trimStart);
           const startPct = (clip.trimStart / clip.duration) * 100;
           const widthPct = (trimmedLen / clip.duration) * 100;
+          const activeCuts = clip.silenceCuts.filter((c) => !c.restored);
+          const keptLen = trimmedLen - activeCuts.reduce((s, c) => s + (c.end - c.start), 0);
           return (
             <div
               key={clip.id}
@@ -51,13 +54,27 @@ export default function Timeline({
               <div className="clip-card__head">
                 <span className="clip-card__index">{i + 1}</span>
                 <span className="clip-card__name">{clip.name}</span>
-                <span className="clip-card__dur">{fmt(trimmedLen)}</span>
+                <span className="clip-card__dur">
+                  {fmt(keptLen)}
+                  {activeCuts.length > 0 && <small> / {fmt(trimmedLen)}</small>}
+                </span>
               </div>
               <div className="clip-card__bar">
                 <div
                   className="clip-card__bar-fill"
                   style={{ left: `${startPct}%`, width: `${widthPct}%` }}
                 />
+                {activeCuts.map((cut) => (
+                  <div
+                    key={cut.id}
+                    className="clip-card__cut"
+                    style={{
+                      left: `${(cut.start / clip.duration) * 100}%`,
+                      width: `${((cut.end - cut.start) / clip.duration) * 100}%`,
+                    }}
+                    title={`Silence cut ${cut.start.toFixed(1)}s–${cut.end.toFixed(1)}s`}
+                  />
+                ))}
               </div>
               <div className="clip-card__trims" onClick={(e) => e.stopPropagation()}>
                 <label>

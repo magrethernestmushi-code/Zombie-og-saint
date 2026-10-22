@@ -1,0 +1,9 @@
+caption-font.ttf is DejaVu Sans Bold, from the DejaVu Fonts project
+(https://dejavu-fonts.github.io/), used here for burned-in text/caption
+rendering in exported video.
+
+DejaVu fonts are based on Bitstream Vera and are released under a
+permissive license (Bitstream Vera License + public-domain additions)
+that allows free use, modification and redistribution, including in
+bundled applications. Full license text:
+https://dejavu-fonts.github.io/License.html

@@ -1,39 +1,101 @@
 # Edmund Og Saint
 
-A free, browser-based video editor. Multi-clip timeline, trim/cut, text and
-captions, color grading, volume and background-noise cleanup, and background
-music — all rendered on your own device with [ffmpeg.wasm](https://ffmpegwasm.netlify.app/).
-No upload, no account, no server costs. Works on phone and desktop browsers.
+A free, browser-based cinematic video editor: multi-clip timeline editing,
+real color grading, a producer-style audio mixer, and real silence
+detection — all rendered on your own device with
+[ffmpeg.wasm](https://ffmpegwasm.netlify.app/). No upload, no account, no
+server costs, no watermark. Works on phone and desktop browsers.
 
-## What it can do
+This README is deliberately specific about what's real and what's a
+deliberate simplification, because it's easy to overclaim with AI-adjacent
+video tools. Every feature below actually runs the processing it describes
+— there are no simulated results or hardcoded "success" messages anywhere
+in this app. Where something isn't a trained AI model, it says so.
 
-- **Clips** — drop in multiple video files, trim in/out points, reorder, remove.
-- **Text** — add timed titles/captions, position, size and color them.
-- **Color** — presets (Vivid, Cinematic, Warm, Cool, Mono) plus manual
-  brightness/contrast/saturation/gamma.
-- **Audio** — adjust clip volume, run an FFT noise-reduction pass on the
-  original audio, and mix in a background music track.
-- **Export** — renders a single MP4 (1080×1920, vertical) entirely in the
-  browser and gives you a download link.
+## What it does, and how
 
-### Honest limits (read this before you promise "Premiere-quality AI" to anyone)
+### Color Lab
+- 15 original cinematic presets (Modern Hollywood, Teal & Orange, Moody
+  Drama, Dark Luxury, Warm Film, Vintage 35mm, Bleach Bypass, Clean
+  Commercial, Natural Documentary, Golden Hour, Cool Blue Night, Black &
+  White Film, Music Video, Soft Romantic, High-Contrast Action) — each is a
+  distinct set of exposure/contrast/curve/color-balance/vignette/grain
+  values, not just a single filter.
+- Manual controls: exposure, contrast, highlights, shadows, whites, blacks,
+  temperature, tint, saturation, vibrance, vignette, film grain, sharpen.
+  All of it maps to a real ffmpeg filter chain (`eq`, `curves`,
+  `colorbalance`, `vignette`, `noise`, `unsharp`) applied identically in
+  preview and export.
+- **Auto Grade** samples real frames from your actual clip and runs two
+  classic, deterministic image-analysis algorithms — a luminance histogram
+  (for exposure/contrast) and gray-world color-cast estimation (for
+  temperature/tint). **This is not a trained AI/ML model** — it's honest,
+  explainable image analysis, and the app says so in the UI.
+- The live viewfinder is a fast CSS approximation (it can't express tone
+  curves or vignette/grain). "Preview exact frame" renders one real frame
+  through the full export filter chain so you can check the actual graded
+  look before exporting.
 
-- All processing happens on the visitor's own device in the browser. It's
-  free and private, but it's as fast as their phone/laptop — a 2-minute clip
-  can take a minute or several to render, and very large files may be slow
-  on older phones.
-- The "AI" noise cleanup is ffmpeg's `afftdn` filter (FFT denoiser). It's a
-  real, useful noise reducer for hiss/fan/wind noise, but it is **not** the
-  same class of tool as Adobe's or CapCut's machine-learning voice isolation.
-  Getting that level of quality means either a paid cloud AI API (cost per
-  use) or a heavier ML model that won't run smoothly on an average phone.
-- There's no account system, cloud storage, or collaboration — everything
-  lives in the visitor's browser tab until they export.
+### Sound Studio
+- Real ffmpeg audio filters, not a volume slider pretending to be a mixer:
+  `afftdn` (FFT noise reduction), `highpass` (hum/rumble), `deesser`,
+  3-band `equalizer`, `acompressor`, `alimiter`, `agate` (noise gate),
+  `aecho` (light reverb approximation — ffmpeg has no true convolution
+  reverb), `afade`, `loudnorm` (loudness normalization to a chosen LUFS
+  target), mono downmix, background music mixing with its own volume.
+- Sound profiles (Podcast Voice, Clean Dialogue, Cinematic Dialogue, Music
+  Video, Social Video) are just sensible starting parameter sets for the
+  same real filters above.
+- Waveform display and peak-level reading are measured from the actual
+  decoded audio (`showwavespic` and `volumedetect`), not illustrative.
 
-If you want true ML-grade audio/video enhancement later, the natural next
-step is a small backend service (e.g. a Render web service) that calls a
-paid AI API for that one feature, while everything else stays free and
-client-side.
+### Silence Remover
+- Runs ffmpeg's real `silencedetect` filter against the actual audio track,
+  not a guess. Proposes a cut list with configurable threshold, minimum
+  silence duration, padding, and a minimum-preserved-pause floor so short
+  natural pauses are never touched.
+- Gentle / Balanced / Aggressive modes are threshold presets.
+- Every cut is shown with its timestamp and can be individually restored
+  before export; nothing is deleted until you export. The timeline and the
+  live preview both reflect active cuts immediately, so what you see is
+  what you'll get.
+
+### Timeline & export
+- Multi-clip import, trim in/out per clip, reorder, remove, text/caption
+  overlays (positioned, timed, colored).
+- Export renders one MP4 (1080×1920, H.264/AAC) by composing: per-clip
+  trims minus any active silence cuts → concat → color grade → text
+  overlays → audio chain → optional music mix. All in the browser, via
+  ffmpeg.wasm — verified end-to-end against real test clips during
+  development (not just "it builds").
+
+## What's deliberately not built, and why
+
+The original brief for this app asked for several things that need either
+a GPU-hosted ML model or a paid cloud AI API — neither of which fits a
+free, client-only, browser-based tool. Building fake versions of these
+would violate this project's own rule against simulated AI, so instead:
+
+- **AI Video Director** (transcription, scene/highlight detection, rough-cut
+  proposals) needs real speech-to-text and often a vision-language model.
+  Not included. A real version would need a server that calls a speech-to-
+  text API (e.g. Whisper, hosted) — a scoped addition, not a client trick.
+- **Automatic reframing / subject tracking for Shorts** needs a real object-
+  tracking model. A center-crop fallback would be dishonest to present as
+  "intelligent tracking," so this isn't included at all rather than faked.
+- **True ML speech enhancement / voice isolation** (the Adobe Podcast /
+  Descript-style "make this sound like a studio" button) needs a trained
+  speech-enhancement model, typically run server-side. The afftdn-based
+  noise reduction in Sound Studio is genuinely useful but is a classical
+  DSP filter, not that.
+- **Vocal/music/stem separation** needs a source-separation model (e.g.
+  Demucs) with real compute behind it — not feasible client-side in a
+  browser tab.
+
+Each of these is a legitimate future phase, but it means standing up a
+small backend service that calls a paid or self-hosted model for that one
+feature, while everything above stays free and client-side. That's a
+deliberate scope decision, not an oversight.
 
 ## Run it locally
 
@@ -41,6 +103,12 @@ client-side.
 npm install
 npm run dev
 ```
+
+`npm install` / `npm run dev` / `npm run build` all first copy the ffmpeg
+WebAssembly core from `node_modules/@ffmpeg/core` into `public/ffmpeg/` (see
+`scripts/copy-ffmpeg-core.mjs`), so the app serves it from its own origin
+instead of fetching it from a third-party CDN at runtime — more reliable,
+and works in locked-down network environments.
 
 Open the printed local URL — on your phone, use your computer's local
 network IP (e.g. `http://192.168.1.20:5173`) while both devices are on the
@@ -52,56 +120,60 @@ same Wi-Fi, or just deploy it (below) and open the live URL on your phone.
 npm run build
 ```
 
-Output goes to `dist/`.
+Output goes to `dist/`, including the self-hosted ffmpeg core files.
 
 ## Deploy: GitHub → Render
 
-**1. Push this project to GitHub**
+This repo is already connected to Render with auto-deploy on push to
+`main` — push to GitHub and it redeploys automatically. For a fresh setup
+elsewhere:
 
-```bash
-git init
-git add .
-git commit -m "Initial commit: Edmund Og Saint video editor"
-git branch -M main
-git remote add origin https://github.com/magrethernestmushi-code/zombie-og-saint.git
-git push -u origin main
-```
+1. Push this project to a GitHub repo.
+2. On [dashboard.render.com](https://dashboard.render.com): **New** →
+   **Static Site**, connect the repo.
+3. Build command: `npm install && npm run build`. Publish directory: `dist`.
 
-(Create the empty repo first at github.com/new, without a README, then run
-the commands above from this project folder.)
+No server, no database, no environment variables needed — it's a static
+site; `render.yaml` in this repo mirrors the same configuration.
 
-**2. Deploy on Render**
+## Honest performance notes
 
-This repo includes a `render.yaml`, so Render can pick up the whole
-configuration automatically:
-
-1. Go to [dashboard.render.com](https://dashboard.render.com) → **New** →
-   **Blueprint**.
-2. Connect your GitHub account and pick the `zombie-og-saint` repo.
-3. Render reads `render.yaml` and creates a **Static Site** with:
-   - Build command: `npm install && npm run build`
-   - Publish directory: `dist`
-4. Click **Apply** — Render builds and gives you a live `https://…onrender.com` URL.
-
-Every push to `main` on GitHub will auto-redeploy. No server, no database,
-no environment variables needed — it's a static site.
-
-**On your phone:** just open the Render URL in your mobile browser. The
-layout is responsive, and ffmpeg.wasm runs the same way on mobile Chrome/Safari
-as it does on desktop (slower on older phones, but it works).
+- All processing — color grading, audio filters, silence detection,
+  export — runs on the visitor's own device. Free and private, but as fast
+  as their hardware: a multi-minute clip with several effects can take
+  real time to render, especially on older phones.
+- There's no account system, cloud storage, or collaboration — everything
+  lives in the visitor's browser tab until they export.
+- The ffmpeg-core WebAssembly bundle is ~31MB; the browser caches it after
+  first load, but first load on a slow connection takes a moment.
 
 ## Project structure
 
 ```
 src/
-  App.tsx              — main state + layout
-  ffmpegEngine.ts       — builds the ffmpeg filter graph and runs export
-  types.ts              — shared types + color presets
+  App.tsx                      — main state + layout
+  ffmpegEngine.ts               — builds the ffmpeg filter graph, runs export,
+                                   silence detection, exact-frame preview, audio analysis
+  types.ts                      — shared types, neutral grade defaults
+  engine/
+    colorGrade.ts                — 15 presets, filter-chain builder, CSS approximation,
+                                     deterministic Auto Grade analysis
+    audioStudio.ts                — sound profiles, audio filter-chain builder
+    silenceRemover.ts             — silencedetect log parsing, cut-list logic
+    frameSampler.ts               — real canvas-based frame sampling for Auto Grade
   components/
-    Timeline.tsx         — clip list, trim handles, reorder
-    PreviewPlayer.tsx     — viewfinder-style preview
-    TextPanel.tsx         — caption/title editor
-    ColorPanel.tsx        — grading controls
-    AudioPanel.tsx         — volume, noise cleanup, music
-    ExportBar.tsx          — render progress + download
+    Toolbar.tsx                   — top bar
+    MediaBrowser.tsx               — left-panel project media list
+    Timeline.tsx                   — clip list, trim handles, reorder, cut overlays
+    PreviewPlayer.tsx               — viewfinder-style preview, respects active cuts
+    ColorLabPanel.tsx                — color grading UI
+    SoundStudioPanel.tsx              — audio mixer UI
+    SilenceRemoverPanel.tsx            — silence detection + cut list UI
+    TextPanel.tsx                      — caption/title editor
+    ExportBar.tsx                       — render progress + download
+scripts/
+  copy-ffmpeg-core.mjs                  — copies ffmpeg-core into public/ at build time
+public/fonts/
+  caption-font.ttf                      — DejaVu Sans Bold, used for burned-in text/captions
+                                           (ffmpeg.wasm has no system fonts of its own)
 ```

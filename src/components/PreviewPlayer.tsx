@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import type { Clip, TextOverlay, ColorSettings } from "../types";
+import type { Clip, TextOverlay, ColorGrade } from "../types";
+import { cssApprox } from "../engine/colorGrade";
+import { computeKeptSegments } from "../engine/silenceRemover";
 
 type Props = {
   clips: Clip[];
   texts: TextOverlay[];
-  color: ColorSettings;
+  color: ColorGrade;
 };
 
 export default function PreviewPlayer({ clips, texts, color }: Props) {
@@ -28,6 +30,17 @@ export default function PreviewPlayer({ clips, texts, color }: Props) {
   function handleTimeUpdate() {
     const el = videoRef.current;
     if (!el || !clip) return;
+
+    // Skip over any active (non-restored) silence cut so the preview
+    // matches what export will actually produce.
+    const activeCuts = clip.silenceCuts.filter((c) => !c.restored);
+    for (const cut of activeCuts) {
+      if (el.currentTime >= cut.start && el.currentTime < cut.end) {
+        el.currentTime = cut.end;
+        break;
+      }
+    }
+
     setLocalTime(el.currentTime);
     if (el.currentTime >= clip.trimEnd) {
       if (index < clips.length - 1) {
@@ -39,17 +52,26 @@ export default function PreviewPlayer({ clips, texts, color }: Props) {
     }
   }
 
-  // elapsed time across the whole merged timeline (approx, for text overlay timing)
-  const elapsedBefore = clips
-    .slice(0, index)
-    .reduce((s, c) => s + Math.max(0, c.trimEnd - c.trimStart), 0);
-  const timelineT = clip
-    ? elapsedBefore + Math.max(0, localTime - clip.trimStart)
-    : 0;
+  // Elapsed time across the whole edited timeline (kept segments only),
+  // used to time text overlays the same way export will.
+  function keptDurationFor(c: Clip): number {
+    const segs = computeKeptSegments(c.trimStart, c.trimEnd, c.silenceCuts);
+    return segs.reduce((s, seg) => s + (seg.end - seg.start), 0);
+  }
+  function keptElapsedWithin(c: Clip, upTo: number): number {
+    const segs = computeKeptSegments(c.trimStart, c.trimEnd, c.silenceCuts);
+    let elapsed = 0;
+    for (const seg of segs) {
+      if (upTo <= seg.start) break;
+      elapsed += Math.min(upTo, seg.end) - seg.start;
+    }
+    return elapsed;
+  }
 
-  const filterCss = color
-    ? `brightness(${1 + color.brightness}) contrast(${color.contrast}) saturate(${color.saturation})`
-    : undefined;
+  const elapsedBefore = clips.slice(0, index).reduce((s, c) => s + keptDurationFor(c), 0);
+  const timelineT = clip ? elapsedBefore + keptElapsedWithin(clip, localTime) : 0;
+
+  const filterCss = cssApprox(color);
 
   return (
     <div className="viewfinder">
@@ -104,14 +126,8 @@ export default function PreviewPlayer({ clips, texts, color }: Props) {
 }
 
 function formatTC(s: number): string {
-  const m = Math.floor(s / 60)
-    .toString()
-    .padStart(2, "0");
-  const sec = Math.floor(s % 60)
-    .toString()
-    .padStart(2, "0");
-  const fr = Math.floor((s % 1) * 100)
-    .toString()
-    .padStart(2, "0");
+  const m = Math.floor(s / 60).toString().padStart(2, "0");
+  const sec = Math.floor(s % 60).toString().padStart(2, "0");
+  const fr = Math.floor((s % 1) * 100).toString().padStart(2, "0");
   return `${m}:${sec}.${fr}`;
 }

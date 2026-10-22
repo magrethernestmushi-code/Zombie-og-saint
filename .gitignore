@@ -5,3 +5,7 @@ dist-ssr
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+
+# Regenerated at build/dev time from node_modules/@ffmpeg/core by
+# scripts/copy-ffmpeg-core.mjs — a 31MB binary, not source.
+public/ffmpeg/

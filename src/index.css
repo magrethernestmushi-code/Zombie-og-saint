@@ -1,15 +1,17 @@
 :root {
-  --ink: #0e0f15;
-  --panel: #15161f;
-  --panel-raised: #1b1d29;
-  --border: #2a2c3a;
-  --border-soft: #22232f;
-  --paper: #f3f1ea;
-  --paper-dim: #a9a8af;
-  --signal: #ff3b30;
-  --signal-dim: #7a1f1b;
-  --amber: #ffb84d;
-  --ok: #4ade80;
+  /* Cinematic dark studio palette */
+  --ink: #0b0d10;
+  --panel: #12161c;
+  --panel-raised: #191f27;
+  --border: #29313b;
+  --border-soft: #1e242c;
+  --paper: #f1ede4;
+  --paper-dim: #8d939c;
+  --signal: #d6a45d;
+  --signal-dim: #6b5330;
+  --steel: #5c7e94;
+  --ok: #6fbf8b;
+  --warn: #d68c5d;
 
   --font-display: "Archivo Expanded", "Archivo", sans-serif;
   --font-body: "Archivo", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -47,7 +49,7 @@ button {
 }
 
 :focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--steel);
   outline-offset: 2px;
 }
 
