@@ -8,6 +8,8 @@ export type Clip = {
   trimEnd: number; // seconds into source
   /** Regions within [trimStart, trimEnd] that the Silence Remover proposed cutting. */
   silenceCuts: SilenceCut[];
+  /** A real frame grabbed from the clip itself, for the timeline filmstrip. */
+  thumbnailUrl: string | null;
 };
 
 export type SilenceCut = {

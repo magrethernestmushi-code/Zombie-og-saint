@@ -135,3 +135,42 @@ export function computeKeptSegments(
   }
   return segments.filter((s) => s.end - s.start > 0.02);
 }
+
+/**
+ * Total length a clip contributes to the merged timeline after its trim and
+ * any active silence cuts are applied.
+ */
+export function keptDurationOfClip(clip: {
+  trimStart: number;
+  trimEnd: number;
+  silenceCuts: SilenceCut[];
+}): number {
+  const segs = computeKeptSegments(clip.trimStart, clip.trimEnd, clip.silenceCuts);
+  return segs.reduce((s, seg) => s + (seg.end - seg.start), 0);
+}
+
+/**
+ * Converts a point in source time (seconds into the clip's own original
+ * file — the same space silence cuts and trims live in) to its position on
+ * the merged output timeline, given everything before it in the project.
+ * Used to time captions/text overlays and the live preview consistently
+ * with what export actually produces. Returns null if the point falls
+ * inside a removed silence cut (it won't appear on the timeline at all).
+ */
+export function sourceTimeToTimelineTime(
+  clipsBefore: Array<{ trimStart: number; trimEnd: number; silenceCuts: SilenceCut[] }>,
+  clip: { trimStart: number; trimEnd: number; silenceCuts: SilenceCut[] },
+  sourceTime: number
+): number | null {
+  const elapsedBefore = clipsBefore.reduce((s, c) => s + keptDurationOfClip(c), 0);
+  const segs = computeKeptSegments(clip.trimStart, clip.trimEnd, clip.silenceCuts);
+  let elapsed = 0;
+  for (const seg of segs) {
+    if (sourceTime <= seg.start) return elapsedBefore + elapsed;
+    if (sourceTime <= seg.end) return elapsedBefore + elapsed + (sourceTime - seg.start);
+    elapsed += seg.end - seg.start;
+  }
+  // Past the end of all kept segments (e.g. inside a trailing cut) — clamp
+  // to the end of this clip's contribution.
+  return elapsedBefore + elapsed;
+}

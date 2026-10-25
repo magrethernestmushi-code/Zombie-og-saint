@@ -293,6 +293,27 @@ export type FrameSample = {
 
 export type AutoGradeResult = ColorGrade;
 
+/**
+ * Real luminance histogram from actually-sampled frames (the same frames
+ * Auto Grade analyzes) — a genuine scope, like a colorist would read, not a
+ * decorative graphic. Returns 32 bins (0..255 luma grouped into buckets),
+ * each normalized 0..1 against the tallest bucket.
+ */
+export function computeLumaHistogram(samples: FrameSample[]): number[] {
+  const bins = new Array(32).fill(0);
+  if (samples.length === 0) return bins;
+  for (const sample of samples) {
+    const { data } = sample;
+    for (let i = 0; i < data.length; i += 4) {
+      const luma = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+      const bin = Math.min(31, Math.floor(luma / 8));
+      bins[bin] += 1;
+    }
+  }
+  const max = Math.max(1, ...bins);
+  return bins.map((v) => v / max);
+}
+
 export function analyzeFramesForAutoGrade(
   samples: FrameSample[],
   strength: number

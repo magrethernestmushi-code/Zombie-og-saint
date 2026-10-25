@@ -1,5 +1,5 @@
 import type { Clip } from "../types";
-import { computeKeptSegments } from "../engine/silenceRemover";
+import { keptDurationOfClip } from "../engine/silenceRemover";
 
 function fmt(s: number): string {
   const m = Math.floor(s / 60);
@@ -26,10 +26,7 @@ export default function Timeline({
   onRemove,
   onAddClick,
 }: Props) {
-  const totalDuration = clips.reduce((sum, c) => {
-    const kept = computeKeptSegments(c.trimStart, c.trimEnd, c.silenceCuts);
-    return sum + kept.reduce((s, seg) => s + (seg.end - seg.start), 0);
-  }, 0);
+  const totalDuration = clips.reduce((sum, c) => sum + keptDurationOfClip(c), 0);
 
   return (
     <div className="timeline">
@@ -44,7 +41,7 @@ export default function Timeline({
           const startPct = (clip.trimStart / clip.duration) * 100;
           const widthPct = (trimmedLen / clip.duration) * 100;
           const activeCuts = clip.silenceCuts.filter((c) => !c.restored);
-          const keptLen = trimmedLen - activeCuts.reduce((s, c) => s + (c.end - c.start), 0);
+          const keptLen = keptDurationOfClip(clip);
           return (
             <div
               key={clip.id}
@@ -52,6 +49,11 @@ export default function Timeline({
               onClick={() => onSelect(clip.id)}
             >
               <div className="clip-card__head">
+                {clip.thumbnailUrl ? (
+                  <img className="clip-card__thumb" src={clip.thumbnailUrl} alt="" />
+                ) : (
+                  <span className="clip-card__thumb clip-card__thumb--empty" />
+                )}
                 <span className="clip-card__index">{i + 1}</span>
                 <span className="clip-card__name">{clip.name}</span>
                 <span className="clip-card__dur">

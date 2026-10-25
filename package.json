@@ -4,9 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run copy-ffmpeg-core && vite",
-    "build": "npm run copy-ffmpeg-core && tsc -b && vite build",
+    "dev": "npm run copy-assets && vite",
+    "build": "npm run copy-assets && tsc -b && vite build",
+    "copy-assets": "npm run copy-ffmpeg-core && npm run copy-whisper-assets",
     "copy-ffmpeg-core": "node scripts/copy-ffmpeg-core.mjs",
+    "copy-whisper-assets": "node scripts/copy-whisper-assets.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -14,8 +16,10 @@
     "@ffmpeg/core": "^0.12.6",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
+    "@huggingface/transformers": "^4.3.1",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "sts-whisper-tiny": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

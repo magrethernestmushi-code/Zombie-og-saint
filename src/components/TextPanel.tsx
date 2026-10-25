@@ -5,9 +5,20 @@ type Props = {
   onAdd: () => void;
   onChange: (id: string, patch: Partial<TextOverlay>) => void;
   onRemove: (id: string) => void;
+  onGenerateCaptions?: () => void;
+  captionBusy?: boolean;
+  captionStatus?: string | null;
 };
 
-export default function TextPanel({ texts, onAdd, onChange, onRemove }: Props) {
+export default function TextPanel({
+  texts,
+  onAdd,
+  onChange,
+  onRemove,
+  onGenerateCaptions,
+  captionBusy,
+  captionStatus,
+}: Props) {
   return (
     <div className="panel-section">
       <div className="panel-section__head">
@@ -16,6 +27,24 @@ export default function TextPanel({ texts, onAdd, onChange, onRemove }: Props) {
           + Add text
         </button>
       </div>
+
+      {onGenerateCaptions && (
+        <div className="auto-caption">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={onGenerateCaptions}
+            disabled={captionBusy}
+          >
+            {captionBusy ? "Listening…" : "Auto-generate captions from audio"}
+          </button>
+          <p className="panel-section__hint">
+            {captionStatus ??
+              "Runs real, offline speech recognition on this clip's actual audio (in your browser — nothing uploaded) and places timed captions below. Like any speech model it can mishear words, especially with background noise or accents it wasn't trained on — review before exporting."}
+          </p>
+        </div>
+      )}
+
       {texts.length === 0 && (
         <p className="panel-section__hint">
           Add a title, caption or label and drag it where you want on the frame.

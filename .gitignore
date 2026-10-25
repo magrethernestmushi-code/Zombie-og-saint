@@ -9,3 +9,9 @@ dist-ssr
 # Regenerated at build/dev time from node_modules/@ffmpeg/core by
 # scripts/copy-ffmpeg-core.mjs — a 31MB binary, not source.
 public/ffmpeg/
+
+# Regenerated at build/dev time by scripts/copy-whisper-assets.mjs from
+# node_modules (sts-whisper-tiny + onnxruntime-web) — ~75MB of binaries,
+# not source.
+public/models/
+public/ort/

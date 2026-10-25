@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Clip, TextOverlay, ColorGrade } from "../types";
 import { cssApprox } from "../engine/colorGrade";
-import { computeKeptSegments } from "../engine/silenceRemover";
+import { sourceTimeToTimelineTime } from "../engine/silenceRemover";
 
 type Props = {
   clips: Clip[];
@@ -52,24 +52,11 @@ export default function PreviewPlayer({ clips, texts, color }: Props) {
     }
   }
 
-  // Elapsed time across the whole edited timeline (kept segments only),
-  // used to time text overlays the same way export will.
-  function keptDurationFor(c: Clip): number {
-    const segs = computeKeptSegments(c.trimStart, c.trimEnd, c.silenceCuts);
-    return segs.reduce((s, seg) => s + (seg.end - seg.start), 0);
-  }
-  function keptElapsedWithin(c: Clip, upTo: number): number {
-    const segs = computeKeptSegments(c.trimStart, c.trimEnd, c.silenceCuts);
-    let elapsed = 0;
-    for (const seg of segs) {
-      if (upTo <= seg.start) break;
-      elapsed += Math.min(upTo, seg.end) - seg.start;
-    }
-    return elapsed;
-  }
-
-  const elapsedBefore = clips.slice(0, index).reduce((s, c) => s + keptDurationFor(c), 0);
-  const timelineT = clip ? elapsedBefore + keptElapsedWithin(clip, localTime) : 0;
+  // Position on the merged, edited timeline — used to time text overlays
+  // the same way export will.
+  const timelineT = clip
+    ? sourceTimeToTimelineTime(clips.slice(0, index), clip, localTime) ?? 0
+    : 0;
 
   const filterCss = cssApprox(color);
 

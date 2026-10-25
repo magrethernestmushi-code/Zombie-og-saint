@@ -10,6 +10,9 @@ type Props = {
   onPreviewExact: () => void;
   autoGradeBusy: boolean;
   exactPreviewUrl: string | null;
+  histogram?: number[] | null;
+  onShowScope?: () => void;
+  scopeBusy?: boolean;
 };
 
 const SLIDERS: Array<{
@@ -40,6 +43,9 @@ export default function ColorLabPanel({
   onPreviewExact,
   autoGradeBusy,
   exactPreviewUrl,
+  histogram,
+  onShowScope,
+  scopeBusy,
 }: Props) {
   const [autoStrength, setAutoStrength] = useState(0.7);
 
@@ -88,6 +94,29 @@ export default function ColorLabPanel({
           a trained AI model.
         </p>
       </div>
+
+      {onShowScope && (
+        <div className="scope-panel">
+          <div className="scope-panel__head">
+            <span>Luma scope</span>
+            <button type="button" className="btn-ghost" onClick={onShowScope} disabled={scopeBusy}>
+              {scopeBusy ? "Reading…" : histogram ? "Refresh" : "Read scope"}
+            </button>
+          </div>
+          {histogram ? (
+            <div className="scope-panel__bars" aria-label="Luminance histogram">
+              {histogram.map((v, i) => (
+                <div key={i} className="scope-panel__bar" style={{ height: `${Math.max(2, v * 100)}%` }} />
+              ))}
+            </div>
+          ) : (
+            <p className="panel-section__hint">
+              A real luminance histogram read from your clip's own frames — shows where your shadows,
+              midtones and highlights actually fall, like a colorist's scope.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="preset-grid">
         {Object.keys(COLOR_PRESETS)

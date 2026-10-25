@@ -47,6 +47,11 @@ export default function MediaBrowser({ clips, activeId, onSelect, onFiles, fileI
                 className={`media-item${clip.id === activeId ? " media-item--active" : ""}`}
                 onClick={() => onSelect(clip.id)}
               >
+                {clip.thumbnailUrl ? (
+                  <img className="media-item__thumb" src={clip.thumbnailUrl} alt="" />
+                ) : (
+                  <span className="media-item__thumb media-item__thumb--empty" />
+                )}
                 <span className="media-item__name">{clip.name}</span>
                 <span className="media-item__dur">{fmt(clip.duration)}</span>
               </button>
